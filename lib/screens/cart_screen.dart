@@ -20,24 +20,114 @@ class CartScreen extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final item = cart.items[index];
                       return ListTile(
-                        leading: Image.network(item.product.images[0]),
-                        title: Text(item.product.name),
-                        subtitle: Text(
-                            'Price: \$${item.product.price} x ${item.quantity}'),
-                        trailing:
-                            Text('\$${item.totalPrice.toStringAsFixed(2)}'),
+                        contentPadding:
+                            EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        title: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Image.network(
+                                  item.product.images[0],
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                ),
+                                Positioned(
+                                  top: 5,
+                                  left: 5,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 3),
+                                    color: Colors.red,
+                                    child: Text(
+                                      '${item.quantity}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.product.name,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Price: \$${item.product.price} x ${item.quantity}',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '\$${item.totalPrice.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed: () {
+                                if (item.quantity > 1) {
+                                  cart.decreaseQuantity(item);
+                                }
+                              },
+                            ),
+                            Text('${item.quantity}'),
+                            IconButton(
+                              icon: Icon(Icons.add),
+                              onPressed: () {
+                                cart.increaseQuantity(item);
+                              },
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child:
-                      Text('Total: \$${cart.totalAmount.toStringAsFixed(2)}'),
+                  child: Text(
+                    'Total: \$${cart.totalAmount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // Proceed to checkout logic
+                    // Logic checkout
+                    cart.clearCart(); // Xóa giỏ hàng sau khi thanh toán
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content:
+                            Text('Checkout successful! Your cart is empty.'),
+                      ),
+                    );
+                    print('Proceed to checkout');
                   },
                   child: Text('Checkout'),
                 ),

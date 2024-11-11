@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:handbag_store/models/item.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../models/products.dart';
@@ -18,23 +19,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _currentPage = 0;
   static const int _itemsPerPage = 5;
   List<Product> _relatedProducts = [];
+  PageController _pageController = PageController();
 
   Future<void> fetchRelatedProducts(String brand) async {
-    final response = await http
-        .get(Uri.parse('https://api.jsonbin.io/v3/b/67314cf0ad19ca34f8c7b830'));
+    try {
+      final response = await http.get(
+          Uri.parse('https://api.jsonbin.io/v3/b/67314cf0ad19ca34f8c7b830'));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      setState(() {
-        _relatedProducts = (data['record'] as List)
-            .map((json) => Product.fromJson(json))
-            .where((item) =>
-                item.brand == widget.product.brand &&
-                item.name != widget.product.name)
-            .toList();
-      });
-    } else {
-      throw Exception('Failed to load related products');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _relatedProducts = (data['record'] as List)
+              .map((json) => Product.fromJson(json))
+              .where((item) =>
+                  item.brand == widget.product.brand &&
+                  item.name != widget.product.name)
+              .toList();
+        });
+      } else {
+        throw Exception('Failed to load related products');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
@@ -96,7 +103,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
             SizedBox(height: 20),
-
             // Product Name and Price
             Text(
               widget.product.name,
@@ -107,7 +113,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               style: TextStyle(fontSize: 22, color: Colors.green),
             ),
             SizedBox(height: 10),
-
             // Rating
             Row(
               children: [
@@ -120,7 +125,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
             SizedBox(height: 16),
-
             // Product Details
             Text(
               'Availability: ${widget.product.availability}',
@@ -136,7 +140,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 16),
-
             // Description
             Text(
               'Description:',
@@ -144,7 +147,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             Text(widget.product.description),
             SizedBox(height: 16),
-
             // Color Options
             if (widget.product.colorOptions.isNotEmpty)
               Column(
@@ -163,7 +165,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
               ),
             SizedBox(height: 16),
-
             // Size and Material
             Text(
               'Size (L x W x H): ${widget.product.size['length']} x ${widget.product.size['width']} x ${widget.product.size['height']}',
@@ -175,14 +176,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 16),
-
             // Features
             if (widget.product.features.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Features:',
+                    'Mô Tả:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   ...widget.product.features.map(
@@ -191,111 +191,139 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
               ),
             SizedBox(height: 20),
-
             // Add to Cart Button
             Center(
               child: ElevatedButton.icon(
                 onPressed: () {
-                  cart.addItem(widget.product);
+                  // Tạo một đối tượng Item với sản phẩm và số lượng mặc định (1)
+                  Item item = Item(product: widget.product, quantity: 1);
+
+                  // Thêm item vào giỏ hàng
+                  cart.addItem(item);
+
+                  // Hiển thị thông báo SnackBar
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content: Text('${widget.product.name} added to cart')),
+                      content: Text('${widget.product.name} added to cart'),
+                    ),
                   );
                 },
                 icon: Icon(Icons.add_shopping_cart),
-                label: Text('Add to Cart'),
+                label: Text('Thêm vào giỏ'),
               ),
             ),
             SizedBox(height: 20),
-
-            // Related Products Section
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.chevron_left),
-                  onPressed: _currentPage > 0
-                      ? () {
-                          setState(() {
-                            _currentPage--;
-                          });
-                        }
-                      : null,
-                ),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      'Related Products',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.chevron_right),
-                  onPressed: _currentPage <
-                          (_relatedProducts.length / _itemsPerPage).ceil() - 1
-                      ? () {
-                          setState(() {
-                            _currentPage++;
-                          });
-                        }
-                      : null,
-                ),
-              ],
+            // Related Products Section (Carousel)
+            Text(
+              'Sản Phẩm Liên Quan',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
-
-            // Display products for the current page
             _relatedProducts.isEmpty
                 ? Center(child: CircularProgressIndicator())
                 : Column(
                     children: [
+                      // Navigation buttons for carousel
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.arrow_back),
+                            onPressed: _currentPage > 0
+                                ? () {
+                                    _pageController.previousPage(
+                                      duration: Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                : null,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.arrow_forward),
+                            onPressed: _currentPage <
+                                    (_relatedProducts.length / _itemsPerPage)
+                                            .ceil() -
+                                        1
+                                ? () {
+                                    _pageController.nextPage(
+                                      duration: Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                : null,
+                          ),
+                        ],
+                      ),
+                      // Carousel (PageView)
                       SizedBox(
-                        height: 180,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: getCurrentPageProducts().length,
-                          itemBuilder: (context, index) {
-                            var relatedProduct =
-                                getCurrentPageProducts()[index];
-                            return GestureDetector(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ProductDetailScreen(
-                                      product: relatedProduct),
-                                ),
-                              ),
-                              child: Container(
-                                width: 130,
-                                margin: EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      child: Image.network(
-                                        relatedProduct.images[0],
-                                        height: 100,
-                                        width: 130,
-                                        fit: BoxFit.cover,
-                                      ),
+                        height: 220,
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount:
+                              (_relatedProducts.length / _itemsPerPage).ceil(),
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          itemBuilder: (context, pageIndex) {
+                            int start = pageIndex * _itemsPerPage;
+                            int end = start + _itemsPerPage;
+                            List<Product> productsOnPage =
+                                _relatedProducts.sublist(
+                                    start,
+                                    end < _relatedProducts.length
+                                        ? end
+                                        : _relatedProducts.length);
+
+                            return ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: productsOnPage.length,
+                              itemBuilder: (context, index) {
+                                var relatedProduct = productsOnPage[index];
+                                return GestureDetector(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ProductDetailScreen(
+                                          product: relatedProduct),
                                     ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      relatedProduct.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 14),
+                                  ),
+                                  child: Container(
+                                    width: 130,
+                                    margin: EdgeInsets.all(8.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          child: Image.network(
+                                            relatedProduct.images[0],
+                                            height: 100,
+                                            width: 130,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          relatedProduct.name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                        Text(
+                                          '\$${relatedProduct.price.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.green),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      '\$${relatedProduct.price.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                          fontSize: 14, color: Colors.green),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),

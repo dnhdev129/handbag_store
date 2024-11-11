@@ -1,41 +1,57 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/item.dart';
-import '../models/products.dart';
 
 class CartProvider with ChangeNotifier {
-  final List<Item> _items = [];
+  // Danh sách sản phẩm trong giỏ hàng
+  List<Item> _items = [];
 
+  // Getter cho items trong giỏ hàng
   List<Item> get items => _items;
 
+  // Getter cho tổng số tiền giỏ hàng
   double get totalAmount {
-    return _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+    double total = 0.0;
+    for (var item in _items) {
+      total += item.totalPrice;
+    }
+    return total;
   }
 
-  void addItem(Product product) {
-    var index = _items
-        .indexWhere((item) => item.product.productId == product.productId);
-    if (index >= 0) {
-      _items[index].quantity += 1;
+  // Thêm sản phẩm vào giỏ hàng
+  void addItem(Item item) {
+    // Kiểm tra nếu sản phẩm đã tồn tại trong giỏ hàng
+    final existingItemIndex = _items.indexWhere(
+        (element) => element.product.productId == item.product.productId);
+
+    if (existingItemIndex >= 0) {
+      // Nếu có, chỉ cần tăng số lượng
+      _items[existingItemIndex].increaseQuantity();
     } else {
-      _items.add(Item(product: product));
+      // Nếu không có, thêm sản phẩm mới vào giỏ
+      _items.add(item);
     }
     notifyListeners();
   }
 
-  void removeItem(String productId) {
-    _items.removeWhere((item) => item.product.productId == productId);
+  // Xóa sản phẩm khỏi giỏ hàng
+  void removeItem(Item item) {
+    _items.remove(item);
     notifyListeners();
   }
 
-  void updateQuantity(String productId, int quantity) {
-    var index =
-        _items.indexWhere((item) => item.product.productId == productId);
-    if (index >= 0) {
-      _items[index].quantity = quantity;
-      notifyListeners();
-    }
+  // Tăng số lượng sản phẩm
+  void increaseQuantity(Item item) {
+    item.increaseQuantity();
+    notifyListeners();
   }
 
+  // Giảm số lượng sản phẩm
+  void decreaseQuantity(Item item) {
+    item.decreaseQuantity();
+    notifyListeners();
+  }
+
+  // Xóa tất cả sản phẩm trong giỏ hàng (dùng khi thanh toán)
   void clearCart() {
     _items.clear();
     notifyListeners();
